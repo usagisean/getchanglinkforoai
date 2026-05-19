@@ -18,7 +18,7 @@
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: var(--font); background: var(--bg); color: var(--text); min-height: 100vh; }
-    .wrap { max-width: 860px; margin: 0 auto; padding: 32px 16px; }
+    .wrap { max-width: 960px; margin: 0 auto; padding: 24px 20px; }
 
     /* 登录页 */
     #loginPage { display: none; min-height: 100vh; align-items: center; justify-content: center; }
@@ -31,7 +31,7 @@
 
     /* 主页 */
     #mainPage { display: none; }
-    .card { background: var(--surface); border: 1px solid var(--border); border-radius: 20px; padding: 28px; margin-bottom: 20px; }
+    .card { background: var(--surface); border: 1px solid var(--border); border-radius: 20px; padding: 28px 32px; margin-bottom: 20px; }
     .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
     h1 { font-size: 22px; font-weight: 700; }
     .badge { font-size: 11px; color: var(--text2); background: var(--surface2); padding: 4px 10px; border-radius: 20px; }
@@ -68,10 +68,13 @@
     details { margin-top: 12px; }
     summary { cursor: pointer; color: var(--text2); font-weight: 600; font-size: 13px; }
     .logout-btn { position: fixed; top: 16px; right: 16px; font-size: 12px; }
-    .brand { text-align: center; padding: 28px 0 8px; }
+    .brand { text-align: center; padding: 20px 0 8px; }
     .brand-name { font-size: 28px; font-weight: 700; letter-spacing: 4px; background: linear-gradient(135deg, #6c5ce7, #a29bfe, #fd79a8); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
     .brand-sub { color: var(--text2); font-size: 12px; margin-top: 4px; letter-spacing: 1px; }
-    @media (max-width: 700px) { .grid { grid-template-columns: 1fr; } }
+    .exit-bar { display: flex; align-items: center; justify-content: center; gap: 8px; padding: 10px 16px; margin-bottom: 16px; border-radius: 12px; background: var(--surface); border: 1px solid var(--border); font-size: 13px; color: var(--text2); }
+    .exit-bar .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--green); flex-shrink: 0; }
+    .exit-bar .region { color: var(--text); font-weight: 600; }
+    @media (max-width: 700px) { .grid { grid-template-columns: 1fr; } .card { padding: 20px 16px; } }
   </style>
 </head>
 <body>
@@ -94,6 +97,11 @@
     <div class="brand">
       <div class="brand-name">ZXAIHUB</div>
       <div class="brand-sub">AI Tools & Services</div>
+    </div>
+    <div id="exitBar" class="exit-bar" style="display:none">
+      <span class="dot"></span>
+      <span>当前出口地区：</span>
+      <span id="exitRegion" class="region">检测中...</span>
     </div>
     <div class="card">
       <div class="card-header">
@@ -307,7 +315,7 @@ $('copySessionUrl').addEventListener('click',async()=>{
 
 function saveProxy(show=true){const p=$('proxy').value.trim();try{if(p)localStorage.setItem(PROXY_KEY,p);else localStorage.removeItem(PROXY_KEY);if(show)$('proxyStatus').textContent=p?'代理已保存。':'代理已清空。';}catch(_){}}
 $('saveProxy').addEventListener('click',()=>saveProxy());
-$('clearProxy').addEventListener('click',()=>{$('proxy').value='';try{localStorage.removeItem(PROXY_KEY);}catch(_){}$('proxyStatus').textContent='已清除。';});
+$('clearProxy').addEventListener('click',()=>{$('proxy').value='';try{localStorage.removeItem(PROXY_KEY);}catch(_){}$('proxyStatus').textContent='已清除。';updateExitRegion(serverRegionCache);});
 
 $('checkProxy').addEventListener('click',async()=>{
   setError('');$('checkProxy').disabled=true;$('checkProxy').textContent='检测中...';$('proxyStatus').textContent='正在检测...';
@@ -318,6 +326,8 @@ $('checkProxy').addEventListener('click',async()=>{
     const loc=[d.country_code,d.country,d.region,d.city].filter(Boolean).join(' / ');
     $('proxyStatus').textContent=`出口：${d.ip||'?'}${loc?'，'+loc:''}${d.isp?'，ISP：'+d.isp:''}`;
     if($('proxy').value.trim())saveProxy(false);
+    // 代理检测成功后，出口地区栏优先显示代理地区
+    updateExitRegion(d);
   }catch(e){$('proxyStatus').textContent='检测失败';setError(e.message);}
   finally{$('checkProxy').disabled=false;$('checkProxy').textContent='检测代理';}
 });
@@ -345,11 +355,35 @@ $('go').addEventListener('click',async()=>{
 $('copy').addEventListener('click',async()=>{if(!currentLink)return;try{await navigator.clipboard.writeText(currentLink);setOk('链接已复制。');}catch(_){setError('复制失败');}});
 $('open').addEventListener('click',()=>{if(currentLink)window.open(currentLink,'_blank','noopener');});
 
+/* ── 出口地区显示 ── */
+let serverRegionCache = null;
+
+function updateExitRegion(data) {
+  if (!data) return;
+  const parts = [data.country, data.city].filter(Boolean);
+  const region = parts.length ? parts.join(' · ') : '未知';
+  const code = data.country_code ? ` (${data.country_code})` : '';
+  $('exitRegion').textContent = region + code;
+  $('exitBar').style.display = 'flex';
+}
+
+async function loadServerRegion() {
+  try {
+    const r = await fetch('/api/server-ip');
+    const d = await r.json();
+    if (d.country || d.country_code) {
+      serverRegionCache = d;
+      updateExitRegion(d);
+    }
+  } catch (_) {}
+}
+
 /* ── 初始化 ── */
 try{const s=localStorage.getItem(PROXY_KEY);if(s){$('proxy').value=s;$('proxyStatus').textContent='已载入保存的代理。';}}catch(_){}
 $('currency').value=CC[$('country').value]||'USD';
 updateTokenHint();
 checkAuth();
+loadServerRegion();
 </script>
 </body>
 </html>

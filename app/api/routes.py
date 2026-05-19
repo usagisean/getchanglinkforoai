@@ -73,6 +73,25 @@ async def auth_status(request: Request):
     }
 
 
+# NOTE: 缓存服务器出口 IP，避免每次请求都检测
+_server_ip_cache: dict = {}
+
+
+@router.get("/server-ip")
+async def server_ip():
+    """返回服务器出口 IP（带缓存，10 分钟刷新一次）"""
+    import time
+    now = time.time()
+    if _server_ip_cache.get("data") and now - _server_ip_cache.get("ts", 0) < 600:
+        return _server_ip_cache["data"]
+
+    status, data = check_proxy_ip("")
+    if status == 200:
+        _server_ip_cache["data"] = data
+        _server_ip_cache["ts"] = now
+    return data
+
+
 @router.post("/login")
 async def login(body: LoginRequest, response: Response):
     """密码登录"""

@@ -1,0 +1,355 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>ZXAIHUB - 支付长链生成器</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #0f0f11; --surface: #1a1a1f; --surface2: #232329;
+      --border: #2e2e36; --text: #e8e8ed; --text2: #9898a4;
+      --accent: #6c5ce7; --accent-hover: #7e6ff0;
+      --green: #2ecc71; --green-bg: rgba(46,204,113,.1);
+      --red: #e74c3c; --red-bg: rgba(231,76,60,.1);
+      --yellow: #f39c12; --yellow-bg: rgba(243,156,18,.1);
+      --radius: 14px; --font: 'Inter',-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC",sans-serif;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: var(--font); background: var(--bg); color: var(--text); min-height: 100vh; }
+    .wrap { max-width: 860px; margin: 0 auto; padding: 32px 16px; }
+
+    /* 登录页 */
+    #loginPage { display: none; min-height: 100vh; align-items: center; justify-content: center; }
+    .login-card { background: var(--surface); border: 1px solid var(--border); border-radius: 20px; padding: 40px; width: 100%; max-width: 400px; text-align: center; }
+    .login-card h2 { font-size: 22px; margin-bottom: 8px; }
+    .login-card p { color: var(--text2); font-size: 14px; margin-bottom: 24px; }
+    .login-card input { width: 100%; padding: 14px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface2); color: var(--text); font: inherit; font-size: 15px; margin-bottom: 16px; outline: none; transition: border-color .2s; }
+    .login-card input:focus { border-color: var(--accent); }
+    .login-err { color: var(--red); font-size: 13px; min-height: 20px; margin-bottom: 8px; }
+
+    /* 主页 */
+    #mainPage { display: none; }
+    .card { background: var(--surface); border: 1px solid var(--border); border-radius: 20px; padding: 28px; margin-bottom: 20px; }
+    .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+    h1 { font-size: 22px; font-weight: 700; }
+    .badge { font-size: 11px; color: var(--text2); background: var(--surface2); padding: 4px 10px; border-radius: 20px; }
+    .desc { color: var(--text2); font-size: 14px; line-height: 1.6; margin-bottom: 16px; }
+
+    label { display: block; margin: 16px 0 6px; font-weight: 600; font-size: 14px; }
+    textarea, input, select { width: 100%; border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 14px; font: inherit; font-size: 14px; background: var(--surface2); color: var(--text); outline: none; transition: border-color .2s; }
+    textarea:focus, input:focus, select:focus { border-color: var(--accent); }
+    textarea { min-height: 120px; resize: vertical; font-family: ui-monospace,SFMono-Regular,Consolas,monospace; font-size: 12px; line-height: 1.6; }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .hint { color: var(--text2); font-size: 12px; margin-top: 4px; }
+    .row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+
+    button, .btn { border: none; border-radius: var(--radius); padding: 12px 20px; font: inherit; font-size: 14px; font-weight: 600; cursor: pointer; transition: all .2s; display: inline-flex; align-items: center; gap: 6px; }
+    .btn-primary { background: var(--accent); color: #fff; }
+    .btn-primary:hover { background: var(--accent-hover); transform: translateY(-1px); }
+    .btn-secondary { background: var(--surface2); color: var(--text); border: 1px solid var(--border); }
+    .btn-secondary:hover { background: var(--border); }
+    .btn-sm { padding: 8px 14px; font-size: 13px; border-radius: 10px; }
+    button:disabled { opacity: .5; cursor: not-allowed; transform: none !important; }
+
+    .alert { border-radius: var(--radius); padding: 12px 16px; font-size: 13px; line-height: 1.5; margin-top: 12px; display: none; }
+    .alert-warn { background: var(--yellow-bg); border: 1px solid rgba(243,156,18,.25); color: var(--yellow); }
+    .alert-ok { background: var(--green-bg); border: 1px solid rgba(46,204,113,.25); color: var(--green); }
+    .alert-err { background: var(--red-bg); border: 1px solid rgba(231,76,60,.25); color: var(--red); white-space: pre-wrap; }
+    .alert-info { background: rgba(108,92,231,.08); border: 1px solid rgba(108,92,231,.2); color: #b4a8f8; display: block; }
+
+    .result { margin-top: 16px; display: none; }
+    .link-card { background: var(--surface2); border: 1px solid var(--border); border-radius: 16px; padding: 16px; margin-bottom: 10px; }
+    .link-label { color: var(--text2); font-size: 12px; margin-bottom: 6px; }
+    .link-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14px; color: var(--accent); }
+    .link-actions { display: flex; gap: 8px; margin-top: 10px; }
+    pre { overflow: auto; background: var(--surface2); border: 1px solid var(--border); border-radius: 12px; padding: 12px; font-size: 12px; color: var(--text2); }
+    details { margin-top: 12px; }
+    summary { cursor: pointer; color: var(--text2); font-weight: 600; font-size: 13px; }
+    .logout-btn { position: fixed; top: 16px; right: 16px; font-size: 12px; }
+    .brand { text-align: center; padding: 28px 0 8px; }
+    .brand-name { font-size: 28px; font-weight: 700; letter-spacing: 4px; background: linear-gradient(135deg, #6c5ce7, #a29bfe, #fd79a8); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+    .brand-sub { color: var(--text2); font-size: 12px; margin-top: 4px; letter-spacing: 1px; }
+    @media (max-width: 700px) { .grid { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+
+<!-- 登录页 -->
+<div id="loginPage">
+  <div class="login-card">
+    <h2>🔐 访问验证</h2>
+    <p>请输入访问密码</p>
+    <input id="loginPwd" type="password" placeholder="密码" />
+    <div id="loginErr" class="login-err"></div>
+    <button class="btn-primary" style="width:100%" id="loginBtn">登 录</button>
+  </div>
+</div>
+
+<!-- 主页 -->
+<div id="mainPage">
+  <button id="logoutBtn" class="btn-secondary btn-sm logout-btn" style="display:none">退出</button>
+  <div class="wrap">
+    <div class="brand">
+      <div class="brand-name">ZXAIHUB</div>
+      <div class="brand-sub">AI Tools & Services</div>
+    </div>
+    <div class="card">
+      <div class="card-header">
+        <h1>支付长链生成器</h1>
+        <span class="badge">v2.0</span>
+      </div>
+      <p class="desc">粘贴 ChatGPT accessToken，创建 hosted checkout 支付会话并返回支付链接。</p>
+      <div class="alert alert-info">🔒 隐私说明：服务端不保存 token / 代理 / 优惠码；代理仅存于浏览器 localStorage。</div>
+
+      <div class="row" style="justify-content:space-between;margin-top:20px">
+        <label style="margin:0">Access Token 或 session JSON</label>
+        <button id="copySessionUrl" class="btn-secondary btn-sm">复制 Session 地址</button>
+      </div>
+      <textarea id="token" placeholder="可粘贴 accessToken，或 https://chatgpt.com/api/auth/session 返回的整段 JSON"></textarea>
+      <div id="tokenHint" class="hint">暂未识别 token。</div>
+
+      <div class="grid">
+        <div>
+          <label>方案</label>
+          <select id="plan">
+            <option value="plus">ChatGPT Plus</option>
+            <option value="team">ChatGPT Team</option>
+          </select>
+        </div>
+        <div>
+          <label>支付页模式</label>
+          <select id="mode">
+            <option value="hosted" selected>hosted：pay.openai.com 长链</option>
+            <option value="custom">custom：chatgpt.com/checkout</option>
+            <option value="redirect">redirect</option>
+          </select>
+        </div>
+        <div>
+          <label>地区</label>
+          <select id="country">
+            <option value="JP">日本 JP</option><option value="US">美国 US</option>
+            <option value="ID">印度尼西亚 ID</option><option value="DE" selected>德国 DE</option>
+            <option value="FR">法国 FR</option><option value="GB">英国 GB</option>
+            <option value="CA">加拿大 CA</option><option value="AU">澳大利亚 AU</option>
+            <option value="KR">韩国 KR</option><option value="SG">新加坡 SG</option>
+            <option value="HK">中国香港 HK</option><option value="TW">中国台湾 TW</option>
+            <option value="IN">印度 IN</option><option value="BR">巴西 BR</option>
+            <option value="MX">墨西哥 MX</option><option value="TH">泰国 TH</option>
+            <option value="MY">马来西亚 MY</option><option value="PH">菲律宾 PH</option>
+            <option value="VN">越南 VN</option><option value="AE">阿联酋 AE</option>
+            <option value="CH">瑞士 CH</option><option value="SE">瑞典 SE</option>
+            <option value="NO">挪威 NO</option><option value="DK">丹麦 DK</option>
+            <option value="PL">波兰 PL</option><option value="CZ">捷克 CZ</option>
+          </select>
+          <div class="hint">选择地区后，币种会自动切换。</div>
+        </div>
+        <div>
+          <label>币种</label>
+          <input id="currency" value="EUR" maxlength="3" readonly />
+          <div class="hint">币种跟随地区自动填充。</div>
+        </div>
+      </div>
+
+      <label>出口代理（可选）</label>
+      <input id="proxy" placeholder="例如：http://127.0.0.1:7890 或 socks5h://user:pass@host:port" />
+      <div class="hint">填写后请求会经该代理出口发出；支持自动尝试多种协议。</div>
+      <div class="row" style="margin-top:10px">
+        <button id="checkProxy" class="btn-secondary btn-sm">检测代理</button>
+        <button id="saveProxy" class="btn-secondary btn-sm">保存代理</button>
+        <button id="clearProxy" class="btn-secondary btn-sm">清除保存</button>
+      </div>
+      <div id="proxyStatus" class="hint" style="margin-top:8px">代理未检测。</div>
+
+      <div id="teamFields" style="display:none">
+        <div class="grid">
+          <div><label>Team 工作区名称</label><input id="workspace" value="linux-do" /></div>
+          <div><label>席位数</label><input id="seats" value="2" type="number" min="2" /></div>
+        </div>
+        <label>Team 优惠码 / 优惠链接</label>
+        <input id="promoCode" value="STRIPEATLASGPT4BIZ050126" placeholder="可填优惠码或粘贴优惠链接" />
+      </div>
+
+      <label class="row" style="margin-top:16px">
+        <input id="promo" type="checkbox" checked style="width:auto;accent-color:var(--accent)" />
+        <span style="font-weight:400;font-size:14px">使用优惠参数</span>
+      </label>
+
+      <div class="row" style="margin-top:20px">
+        <button id="go" class="btn-primary">生成支付长链</button>
+        <button id="copy" class="btn-secondary" disabled>复制链接</button>
+        <button id="open" class="btn-secondary" disabled>打开链接</button>
+      </div>
+
+      <div id="ok" class="alert alert-ok"></div>
+      <div id="error" class="alert alert-err"></div>
+
+      <div id="result" class="result">
+        <strong>生成结果</strong>
+        <div id="links"></div>
+        <details><summary>查看原始返回</summary><pre id="raw"></pre></details>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const PROXY_KEY = 'payurl_proxy_v2';
+const CC = {JP:'JPY',US:'USD',ID:'IDR',DE:'EUR',FR:'EUR',GB:'GBP',CA:'CAD',AU:'AUD',KR:'KRW',SG:'SGD',HK:'HKD',TW:'TWD',IN:'INR',BR:'BRL',MX:'MXN',TH:'THB',MY:'MYR',PH:'PHP',VN:'VND',AE:'AED',CH:'CHF',SE:'SEK',NO:'NOK',DK:'DKK',PL:'PLN',CZ:'CZK'};
+let currentLink = '';
+
+/* ── 认证 ── */
+async function checkAuth() {
+  try {
+    const r = await fetch('/api/auth-status');
+    const d = await r.json();
+    if (!d.auth_required) {
+      $('mainPage').style.display = 'block';
+      return;
+    }
+    if (d.authenticated) {
+      $('mainPage').style.display = 'block';
+      $('logoutBtn').style.display = 'block';
+    } else {
+      $('loginPage').style.display = 'flex';
+    }
+  } catch (_) {
+    $('mainPage').style.display = 'block';
+  }
+}
+
+$('loginBtn').addEventListener('click', async () => {
+  const pwd = $('loginPwd').value;
+  if (!pwd) { $('loginErr').textContent = '请输入密码'; return; }
+  $('loginBtn').disabled = true;
+  try {
+    const r = await fetch('/api/login', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:pwd})});
+    const d = await r.json();
+    if (d.error) { $('loginErr').textContent = d.error; return; }
+    $('loginPage').style.display = 'none';
+    $('mainPage').style.display = 'block';
+    $('logoutBtn').style.display = 'block';
+  } catch (e) { $('loginErr').textContent = '登录失败'; }
+  finally { $('loginBtn').disabled = false; }
+});
+
+$('loginPwd').addEventListener('keydown', (e) => { if (e.key === 'Enter') $('loginBtn').click(); });
+
+$('logoutBtn').addEventListener('click', async () => {
+  await fetch('/api/logout', {method:'POST'});
+  location.reload();
+});
+
+/* ── Token 解析 ── */
+function extractToken(text) {
+  text = String(text||'').trim();
+  if (/^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/.test(text)) return text;
+  try { const j=JSON.parse(text); return j.accessToken||j.access_token||j.token||j?.data?.accessToken||''; } catch(_){}
+  const m=text.match(/eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+/);
+  return m?m[0]:'';
+}
+
+function decodeJwt(token) {
+  try { const p=token.split('.')[1]; return JSON.parse(decodeURIComponent(Array.from(atob(p.replace(/-/g,'+').replace(/_/g,'/'))).map(c=>'%'+c.charCodeAt(0).toString(16).padStart(2,'0')).join(''))); } catch(_){ return {}; }
+}
+
+function updateTokenHint() {
+  const t=extractToken($('token').value);
+  if(!t){$('tokenHint').textContent='暂未识别 token。';return;}
+  const p=decodeJwt(t); const e=p.email||p['https://api.openai.com/profile']?.email||'';
+  $('tokenHint').textContent=e?`已识别 token，邮箱：${e}`:'已识别 token。';
+}
+
+/* ── 工具函数 ── */
+function setError(m){$('error').style.display=m?'block':'none';$('error').textContent=m||'';}
+function setOk(m){$('ok').style.display=m?'block':'none';$('ok').textContent=m||'';}
+function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+function extractPromo(v){const t=String(v||'').trim();if(!t)return'';try{return(new URL(t)).searchParams.get('promoCode')||t;}catch(_){}const m=t.match(/promoCode=([^&#\s]+)/i);return decodeURIComponent(m?.[1]||t).trim();}
+
+function linkLabel(k){return{url:'Stripe 支付链接',stripe_hosted_url:'Stripe 支付链接',checkout_url:'ChatGPT 支付短链',chatgpt_checkout_url:'ChatGPT 支付短链',openai_payurl:'OpenAI 站内长链'}[k]||k;}
+
+/* ── 结果展示 ── */
+function setResult(payload) {
+  const links=[];
+  for(const k of['url','stripe_hosted_url','checkout_url','chatgpt_checkout_url'])if(payload[k])links.push([k,payload[k]]);
+  currentLink=links.length?links[0][1]:'';
+  $('copy').disabled=!currentLink; $('open').disabled=!currentLink;
+  $('links').innerHTML=links.length?links.map(([k,v],i)=>`
+    <div class="link-card">
+      <div class="link-label">${esc(linkLabel(k))}</div>
+      <div class="link-text">${esc(v)}</div>
+      <div class="link-actions">
+        <button class="btn-secondary btn-sm rcopy" data-i="${i}">复制</button>
+        <button class="btn-secondary btn-sm ropen" data-i="${i}">打开</button>
+      </div>
+    </div>`).join(''):'<p class="hint">返回中没有可识别链接，请看原始返回。</p>';
+  $('raw').textContent=JSON.stringify(payload,null,2);
+  $('result').style.display='block';
+  document.querySelectorAll('.rcopy').forEach(b=>b.addEventListener('click',async()=>{
+    const l=links[+b.dataset.i]; if(!l)return;
+    try{await navigator.clipboard.writeText(l[1]);b.textContent='已复制';setTimeout(()=>b.textContent='复制',1200);}catch(_){}
+  }));
+  document.querySelectorAll('.ropen').forEach(b=>b.addEventListener('click',()=>{const l=links[+b.dataset.i];if(l)window.open(l[1],'_blank','noopener');}));
+  if(payload.proxy_used&&payload.proxy_used!==$('proxy').value.trim()){$('proxy').value=payload.proxy_used;saveProxy(false);}
+  if(currentLink)setOk('已生成支付长链。');
+}
+
+/* ── 事件绑定 ── */
+$('token').addEventListener('input',updateTokenHint);
+$('country').addEventListener('change',()=>{$('currency').value=CC[$('country').value]||'USD';});
+$('plan').addEventListener('change',()=>{$('teamFields').style.display=$('plan').value==='team'?'block':'none';});
+
+$('copySessionUrl').addEventListener('click',async()=>{
+  try{await navigator.clipboard.writeText('https://chatgpt.com/api/auth/session');$('copySessionUrl').textContent='已复制';setTimeout(()=>$('copySessionUrl').textContent='复制 Session 地址',1200);}catch(_){}
+});
+
+function saveProxy(show=true){const p=$('proxy').value.trim();try{if(p)localStorage.setItem(PROXY_KEY,p);else localStorage.removeItem(PROXY_KEY);if(show)$('proxyStatus').textContent=p?'代理已保存。':'代理已清空。';}catch(_){}}
+$('saveProxy').addEventListener('click',()=>saveProxy());
+$('clearProxy').addEventListener('click',()=>{$('proxy').value='';try{localStorage.removeItem(PROXY_KEY);}catch(_){}$('proxyStatus').textContent='已清除。';});
+
+$('checkProxy').addEventListener('click',async()=>{
+  setError('');$('checkProxy').disabled=true;$('checkProxy').textContent='检测中...';$('proxyStatus').textContent='正在检测...';
+  try{
+    const r=await fetch('/api/proxy-check',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({proxy:$('proxy').value.trim()})});
+    const d=await r.json(); if(!r.ok||d.error)throw new Error(d.error||'检测失败');
+    if(d.proxy_used&&d.proxy_used!==$('proxy').value.trim())$('proxy').value=d.proxy_used;
+    const loc=[d.country_code,d.country,d.region,d.city].filter(Boolean).join(' / ');
+    $('proxyStatus').textContent=`出口：${d.ip||'?'}${loc?'，'+loc:''}${d.isp?'，ISP：'+d.isp:''}`;
+    if($('proxy').value.trim())saveProxy(false);
+  }catch(e){$('proxyStatus').textContent='检测失败';setError(e.message);}
+  finally{$('checkProxy').disabled=false;$('checkProxy').textContent='检测代理';}
+});
+
+$('go').addEventListener('click',async()=>{
+  setError('');setOk('');$('result').style.display='none';currentLink='';$('copy').disabled=true;$('open').disabled=true;
+  const token=extractToken($('token').value);
+  if(!token){setError('没有识别到 accessToken。');return;}
+  $('go').disabled=true;$('go').textContent='请求中...';
+  try{
+    const r=await fetch('/api/checkout',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
+      token,plan:$('plan').value,checkout_ui_mode:$('mode').value,
+      country:$('country').value.trim().toUpperCase(),currency:$('currency').value.trim().toUpperCase(),
+      proxy:$('proxy').value.trim(),use_promo:$('promo').checked,
+      promo_code:extractPromo($('promoCode')?.value),
+      workspace_name:$('workspace')?.value?.trim()||'linux-do',
+      seat_quantity:Number($('seats')?.value||2),
+    })});
+    const d=await r.json(); if(!r.ok||d.error)throw new Error(d.error||'请求失败');
+    setResult(d);
+  }catch(e){setError(e.message);}
+  finally{$('go').disabled=false;$('go').textContent='生成支付长链';}
+});
+
+$('copy').addEventListener('click',async()=>{if(!currentLink)return;try{await navigator.clipboard.writeText(currentLink);setOk('链接已复制。');}catch(_){setError('复制失败');}});
+$('open').addEventListener('click',()=>{if(currentLink)window.open(currentLink,'_blank','noopener');});
+
+/* ── 初始化 ── */
+try{const s=localStorage.getItem(PROXY_KEY);if(s){$('proxy').value=s;$('proxyStatus').textContent='已载入保存的代理。';}}catch(_){}
+$('currency').value=CC[$('country').value]||'USD';
+updateTokenHint();
+checkAuth();
+</script>
+</body>
+</html>

@@ -3,21 +3,18 @@ services:
     build: .
     env_file: .env
     restart: unless-stopped
+
+  caddy:
+    image: caddy:2-alpine
     ports:
-      - "8000:8000"
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile
+      - caddy_data:/data
+    restart: unless-stopped
+    depends_on:
+      - app
 
-  # 有域名时取消下方注释，启用 Caddy 自动 HTTPS
-  # caddy:
-  #   image: caddy:2-alpine
-  #   ports:
-  #     - "80:80"
-  #     - "443:443"
-  #   volumes:
-  #     - ./Caddyfile:/etc/caddy/Caddyfile
-  #     - caddy_data:/data
-  #   restart: unless-stopped
-  #   depends_on:
-  #     - app
-
-# volumes:
-#   caddy_data:
+volumes:
+  caddy_data:

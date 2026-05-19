@@ -1,4 +1,3 @@
-# 将 pay.yourdomain.com 替换为你的实际域名
-pay.yourdomain.com {
+paylink.zxaihub.com {
     reverse_proxy app:8000
 }
